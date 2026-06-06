@@ -16,7 +16,17 @@ APP_ID = "journal-parser"
 
 
 def _find_icon_ico(repo: Path) -> Path | None:
-    # Prefer installed icon, fallback to repo assets.
+    # Prefer icon from the install root / working directory, then fallback to repo assets.
+    try:
+        cwd = Path.cwd()
+        candidates = [cwd / "app.ico", cwd / "app.png"]
+        for p in candidates:
+            if p.exists():
+                return p
+    except Exception:
+        pass
+
+    # Repo fallbacks
     candidates = [
         repo / "installer" / "payload" / "app.ico",
         repo / "assets" / "app.png",
