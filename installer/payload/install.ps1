@@ -47,7 +47,49 @@ function Is-Administrator() {
   }
 }
 
+function Get-InvokerExePath() {
+  # Best-effort: walk up the process tree and try to find the original self-extracting EXE path
+  # (useful for IExpress which runs the script from a temp extraction folder).
+  try {
+    $currentPid = $PID
+    for ($i = 0; $i -lt 12; $i++) {
+      $p = Get-CimInstance Win32_Process -Filter "ProcessId=$currentPid" -ErrorAction SilentlyContinue
+      if (-not $p) { break }
+
+      $candidates = @()
+      if ($p.ExecutablePath) { $candidates += [string]$p.ExecutablePath }
+
+      $cmd = [string]$p.CommandLine
+      if ($cmd) {
+        $rx = '(?i)(?:^|\\s)(\"(?<q>[A-Z]:\\\\[^\\\"]+\\.exe)\"|(?<p>[A-Z]:\\\\[^\\s]+\\.exe))(?:\\s|$)'
+        foreach ($m in ([regex]::Matches($cmd, $rx))) {
+          $path = if ($m.Groups["q"].Success) { $m.Groups["q"].Value } else { $m.Groups["p"].Value }
+          if ($path) { $candidates += $path }
+        }
+      }
+
+      foreach ($c in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $c)) { continue }
+        $leaf = (Split-Path -Leaf $c).ToLowerInvariant()
+        if ($leaf -in @("powershell.exe","pwsh.exe","cmd.exe","conhost.exe","wextract.exe","iexpress.exe")) { continue }
+        # Prefer our package exe name if present
+        if ($leaf -in @("installer.exe","journal-parser-setup.exe","journal-parser-installer.exe")) { return $c }
+        if ($leaf -like "*journal-parser*") { return $c }
+      }
+
+      if (-not $p.ParentProcessId -or $p.ParentProcessId -le 0) { break }
+      $currentPid = [int]$p.ParentProcessId
+    }
+  } catch { }
+  return ""
+}
+
 function Get-DefaultInstallRoot([switch]$machineInstall) {
+  $invoker = Get-InvokerExePath
+  if ($invoker) {
+    $dir = Split-Path -Parent $invoker
+    if ($dir) { return $dir }
+  }
   if ($machineInstall) {
     $base = [Environment]::GetFolderPath("ProgramFiles")
     return Join-Path $base "journal-parser"
@@ -57,12 +99,26 @@ function Get-DefaultInstallRoot([switch]$machineInstall) {
 }
 
 function Get-DesktopShortcutPath([string]$name) {
-  $desktop = if ($Machine) { [Environment]::GetFolderPath("CommonDesktopDirectory") } else { [Environment]::GetFolderPath("Desktop") }
+  $pf = [Environment]::GetFolderPath("ProgramFiles")
+  $pf86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
+  $machineShortcuts =
+    $Machine -or
+    ($installRoot -and $pf -and $installRoot.StartsWith($pf, [StringComparison]::OrdinalIgnoreCase)) -or
+    ($installRoot -and $pf86 -and $installRoot.StartsWith($pf86, [StringComparison]::OrdinalIgnoreCase))
+
+  $desktop = if ($machineShortcuts) { [Environment]::GetFolderPath("CommonDesktopDirectory") } else { [Environment]::GetFolderPath("Desktop") }
   return Join-Path $desktop $name
 }
 
 function Get-StartMenuDir() {
-  $programs = if ($Machine) { [Environment]::GetFolderPath("CommonPrograms") } else { [Environment]::GetFolderPath("Programs") }
+  $pf = [Environment]::GetFolderPath("ProgramFiles")
+  $pf86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
+  $machineShortcuts =
+    $Machine -or
+    ($installRoot -and $pf -and $installRoot.StartsWith($pf, [StringComparison]::OrdinalIgnoreCase)) -or
+    ($installRoot -and $pf86 -and $installRoot.StartsWith($pf86, [StringComparison]::OrdinalIgnoreCase))
+
+  $programs = if ($machineShortcuts) { [Environment]::GetFolderPath("CommonPrograms") } else { [Environment]::GetFolderPath("Programs") }
   return Join-Path $programs "journal-parser"
 }
 
@@ -85,11 +141,26 @@ function Ensure-Python() {
   }
 }
 
-function Ensure-Elevated-IfNeeded([string]$installRoot) {
-  if (-not $Machine) { return }
-  if (Is-Administrator) { return }
+function Test-WriteAccess([string]$dir) {
+  try {
+    if (-not (Test-Path -LiteralPath $dir)) {
+      New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    $probe = Join-Path $dir ("._write_probe_" + [Guid]::NewGuid().ToString("N") + ".tmp")
+    Set-Content -LiteralPath $probe -Value "ok" -Encoding ASCII
+    Remove-Item -LiteralPath $probe -Force
+    return $true
+  } catch {
+    return $false
+  }
+}
 
-  Info "Elevation required (Program Files install). Requesting administrator privileges..."
+function Ensure-Elevated-IfNeeded([string]$installRoot) {
+  if (Is-Administrator) { return }
+  if (Test-WriteAccess $installRoot) { return }
+
+  Info "No write access to: $installRoot"
+  Info "Requesting administrator privileges..."
 
   $ps = (Get-Command powershell.exe).Source
   $self = $PSCommandPath
@@ -98,9 +169,9 @@ function Ensure-Elevated-IfNeeded([string]$installRoot) {
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-File", "`"$self`"",
-    "-Machine",
     "-InstallRoot", "`"$installRoot`""
   )
+  if ($Machine) { $argList += "-Machine" }
   if ($CreateShortcuts) { $argList += "-CreateShortcuts" }
   if ($Launch) { $argList += "-Launch" }
   if ($ForceUpdate) { $argList += "-ForceUpdate" }
