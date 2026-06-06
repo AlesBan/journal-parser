@@ -5,7 +5,14 @@ set "ROOT=%~dp0"
 cd /d "%ROOT%"
 
 REM Install/update only if needed (install.ps1 caches installed revision).
-powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%install.ps1"
+if exist "%ROOT%install.ps1" (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%install.ps1"
+) else if exist "%ROOT%payload\install.ps1" (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%payload\install.ps1"
+) else (
+  echo ERROR: install.ps1 not found in "%ROOT%" or "%ROOT%payload\" 1>&2
+  exit /b 1
+)
 
 REM Launch GUI without terminal window.
 if exist ".venv\Scripts\pythonw.exe" (

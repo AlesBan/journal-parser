@@ -5,7 +5,7 @@ AppVersion=0.1.0
 AppPublisher=journal-parser
 DefaultDirName={localappdata}\journal-parser
 DisableProgramGroupPage=yes
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64
 OutputDir=output
 OutputBaseFilename=journal-parser-setup
@@ -36,5 +36,5 @@ Name: "{autoprograms}\Обновить journal-parser"; Filename: "powershell.ex
 Name: "{autodesktop}\journal-parser"; Filename: "{app}\journal-parser-bootstrap.bat"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -CreateShortcuts -Launch"; Flags: postinstall skipifsilent runhidden
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -Machine -InstallRoot ""{app}"" -CreateShortcuts -Launch"; Flags: postinstall skipifsilent runhidden
 

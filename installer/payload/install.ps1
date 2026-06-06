@@ -1,7 +1,9 @@
 param(
   [switch]$CreateShortcuts,
   [switch]$Launch,
-  [switch]$ForceUpdate
+  [switch]$ForceUpdate,
+  [switch]$Machine,
+  [string]$InstallRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,18 +37,32 @@ function Get-LatestZipUrl([string]$owner, [string]$repo, [string]$branch) {
   return "https://github.com/$owner/$repo/archive/refs/heads/$branch.zip"
 }
 
-function Get-InstallRoot() {
+function Is-Administrator() {
+  try {
+    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $p = New-Object Security.Principal.WindowsPrincipal($id)
+    return $p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  } catch {
+    return $false
+  }
+}
+
+function Get-DefaultInstallRoot([switch]$machineInstall) {
+  if ($machineInstall) {
+    $base = [Environment]::GetFolderPath("ProgramFiles")
+    return Join-Path $base "journal-parser"
+  }
   $base = [Environment]::GetFolderPath("LocalApplicationData")
   return Join-Path $base "journal-parser"
 }
 
 function Get-DesktopShortcutPath([string]$name) {
-  $desktop = [Environment]::GetFolderPath("Desktop")
+  $desktop = if ($Machine) { [Environment]::GetFolderPath("CommonDesktopDirectory") } else { [Environment]::GetFolderPath("Desktop") }
   return Join-Path $desktop $name
 }
 
 function Get-StartMenuDir() {
-  $programs = [Environment]::GetFolderPath("Programs")
+  $programs = if ($Machine) { [Environment]::GetFolderPath("CommonPrograms") } else { [Environment]::GetFolderPath("Programs") }
   return Join-Path $programs "journal-parser"
 }
 
@@ -69,10 +85,47 @@ function Ensure-Python() {
   }
 }
 
-function Run([string]$exe, [string]$args, [string]$cwd) {
-  $p = Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory $cwd -Wait -PassThru -NoNewWindow
+function Ensure-Elevated-IfNeeded([string]$installRoot) {
+  if (-not $Machine) { return }
+  if (Is-Administrator) { return }
+
+  Info "Elevation required (Program Files install). Requesting administrator privileges..."
+
+  $ps = (Get-Command powershell.exe).Source
+  $self = $PSCommandPath
+
+  $argList = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", "`"$self`"",
+    "-Machine",
+    "-InstallRoot", "`"$installRoot`""
+  )
+  if ($CreateShortcuts) { $argList += "-CreateShortcuts" }
+  if ($Launch) { $argList += "-Launch" }
+  if ($ForceUpdate) { $argList += "-ForceUpdate" }
+
+  try {
+    $p = Start-Process -FilePath $ps -ArgumentList ($argList -join " ") -Verb RunAs -Wait -PassThru
+  } catch {
+    Fail "Не удалось запросить права администратора (RunAs)."
+  }
+
   if ($p.ExitCode -ne 0) {
-    Fail "Command failed ($exe $args). ExitCode=$($p.ExitCode)"
+    Fail "Установка/обновление (elevated) завершились с ошибкой. ExitCode=$($p.ExitCode)"
+  }
+
+  exit 0
+}
+
+function Run([string]$exe, [string[]]$argumentList, [string]$cwd) {
+  if ($null -eq $argumentList -or $argumentList.Count -eq 0) {
+    $p = Start-Process -FilePath $exe -WorkingDirectory $cwd -Wait -PassThru -NoNewWindow
+  } else {
+    $p = Start-Process -FilePath $exe -ArgumentList $argumentList -WorkingDirectory $cwd -Wait -PassThru -NoNewWindow
+  }
+  if ($p.ExitCode -ne 0) {
+    Fail "Command failed ($exe $($argumentList -join ' ')). ExitCode=$($p.ExitCode)"
   }
 }
 
@@ -114,7 +167,8 @@ $BRANCH = "main"
 
 Ensure-Python
 
-$installRoot = Get-InstallRoot
+$installRoot = if ($InstallRoot -and $InstallRoot.Trim()) { $InstallRoot } else { Get-DefaultInstallRoot -machineInstall:$Machine }
+Ensure-Elevated-IfNeeded $installRoot
 Ensure-Dir $installRoot
 
 # Only download/update if remote revision differs (or unknown).
@@ -199,7 +253,8 @@ endlocal
 $updatePs1 = Join-Path $installRoot "update.ps1"
 @"
 \$ErrorActionPreference = 'Stop'
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path (Split-Path -Parent \$MyInvocation.MyCommand.Path) 'install.ps1') -ForceUpdate
+\$here = Split-Path -Parent \$MyInvocation.MyCommand.Path
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path \$here 'install.ps1') -ForceUpdate -InstallRoot `"\$here`"$(if ($Machine) { " -Machine" } else { "" })
 "@ | Set-Content -Encoding UTF8 -LiteralPath $updatePs1
 
 # Copy this install.ps1 into install root for future updates.
