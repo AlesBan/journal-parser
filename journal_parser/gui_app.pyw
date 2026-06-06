@@ -12,6 +12,7 @@ from journal_parser.analyze import analyze_pdf, build_report_path
 
 
 APP_NAME = "journal-parser"
+APP_ID = "journal-parser"
 
 
 def _find_icon_ico(repo: Path) -> Path | None:
@@ -24,6 +25,16 @@ def _find_icon_ico(repo: Path) -> Path | None:
         if p.exists():
             return p
     return None
+
+
+def _set_windows_app_user_model_id(app_id: str) -> None:
+    # Helps Windows taskbar group the app and use the window icon instead of pythonw.exe icon.
+    try:
+        import ctypes  # noqa: PLC0415
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
 
 
 def _appdata_dir() -> Path:
@@ -63,6 +74,7 @@ def _open_path(path: Path) -> None:
 
 class App:
     def __init__(self, root: Tk) -> None:
+        _set_windows_app_user_model_id(APP_ID)
         self.root = root
         self.root.title("journal-parser")
         self.root.geometry("860x520")

@@ -18,6 +18,19 @@ function Info([string]$msg) {
   Write-Host $msg -ForegroundColor Cyan
 }
 
+function Get-StateDir() {
+  $base = [Environment]::GetFolderPath("ApplicationData")
+  return Join-Path $base "journal-parser"
+}
+
+function Write-InstallRootPointer([string]$installRoot) {
+  try {
+    $dir = Get-StateDir
+    Ensure-Dir $dir
+    Set-Content -Encoding UTF8 -LiteralPath (Join-Path $dir "install-root.txt") -Value $installRoot
+  } catch { }
+}
+
 function Ensure-Dir([string]$path) {
   if (-not (Test-Path -LiteralPath $path)) {
     New-Item -ItemType Directory -Path $path | Out-Null
@@ -243,6 +256,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installRoot = if ($InstallRoot -and $InstallRoot.Trim()) { $InstallRoot } else { Get-DefaultInstallRoot -machineInstall:$Machine }
 Ensure-Elevated-IfNeeded $installRoot
 Ensure-Dir $installRoot
+Write-InstallRootPointer $installRoot
 
 # Only download/update if remote revision differs (or unknown).
 $installed = Read-Installed-Revision $installRoot
@@ -324,11 +338,9 @@ endlocal
 "@ | Set-Content -Encoding ASCII -LiteralPath $runBat
 
 $appIco = Join-Path $installRoot "app.ico"
-if (-not (Test-Path -LiteralPath $appIco)) {
-  $srcIco = Join-Path $here "app.ico"
-  if (Test-Path -LiteralPath $srcIco) {
-    Copy-Item -Force -LiteralPath $srcIco -Destination $appIco
-  }
+$srcIco = Join-Path $here "app.ico"
+if (Test-Path -LiteralPath $srcIco) {
+  Copy-Item -Force -LiteralPath $srcIco -Destination $appIco
 }
 
 $updatePs1 = Join-Path $installRoot "update.ps1"
