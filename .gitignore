@@ -18,3 +18,5 @@ cache/
 .imagetoword-session.json
 
 reports/
+
+installer/output/

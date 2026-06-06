@@ -13,6 +13,13 @@
 
 - `install.bat` — установка в `%LOCALAPPDATA%\journal-parser` + ярлык на рабочий стол
 - `update.bat` — “reinstaller”: подтянуть свежую версию с GitHub (ваши `filters/` сохраняются)
+- `installer\output\journal-parser-setup.exe` — полноценный установщик (собирается Inno Setup)
+
+Сборка установщика (для разработчика):
+
+```powershell
+installer\build_installer.ps1
+```
 
 1) Установить зависимости:
 
