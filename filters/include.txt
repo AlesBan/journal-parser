@@ -1,7 +1,10 @@
-# include fragments (one per line)
-# - lowercase is recommended (pipeline lowercases anyway)
-# - substring match: token is kept if it contains ANY fragment here
-# - lines starting with # are ignored
+# include (фрагменты, по 1 на строку)
+# - регистр не важен: пайплайн приводит всё к нижнему регистру (и ё→е)
+# - подстрочный поиск: токен ОСТАЁТСЯ, если содержит ЛЮБОЙ фрагмент из этого списка
+# - строки, начинающиеся с #, игнорируются
+
+фенофибр
+эзетимиб
 ацетилсалицил
 парин
 олол

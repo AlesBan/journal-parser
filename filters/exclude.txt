@@ -1,7 +1,7 @@
-# exclude fragments (one per line)
-# - substring match: token is dropped if it contains ANY fragment here
-# - apply AFTER include filtering
-# - lines starting with # are ignored
+# exclude (фрагменты, по 1 на строку)
+# - подстрочный поиск: токен УДАЛЯЕТСЯ, если содержит ЛЮБОЙ фрагмент из этого списка
+# - применяется ПОСЛЕ include-фильтра
+# - строки, начинающиеся с #, игнорируются
 гемодинамик
 железодефицит
 антиоксидант
@@ -19,3 +19,4 @@
 разработ
 восстанов
 приложен
+активир

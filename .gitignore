@@ -9,8 +9,12 @@ data/sources/**/*
 data/built/*
 !data/built/.gitkeep
 
+data/
+
 cache/
 *.xlsx
 .env
 
 .imagetoword-session.json
+
+reports/
