@@ -1,3 +1,9 @@
+param(
+  [switch]$CreateShortcuts,
+  [switch]$Launch,
+  [switch]$ForceUpdate
+)
+
 $ErrorActionPreference = "Stop"
 
 function Fail([string]$msg) {
@@ -32,6 +38,28 @@ function Get-LatestZipUrl([string]$owner, [string]$repo, [string]$branch) {
 function Get-InstallRoot() {
   $base = [Environment]::GetFolderPath("LocalApplicationData")
   return Join-Path $base "journal-parser"
+}
+
+function Get-DesktopShortcutPath([string]$name) {
+  $desktop = [Environment]::GetFolderPath("Desktop")
+  return Join-Path $desktop $name
+}
+
+function Get-StartMenuDir() {
+  $programs = [Environment]::GetFolderPath("Programs")
+  return Join-Path $programs "journal-parser"
+}
+
+function Create-Shortcut([string]$shortcutPath, [string]$targetPath, [string]$workingDir, [string]$arguments, [string]$iconPath) {
+  $wsh = New-Object -ComObject WScript.Shell
+  $sc = $wsh.CreateShortcut($shortcutPath)
+  $sc.TargetPath = $targetPath
+  $sc.WorkingDirectory = $workingDir
+  $sc.Arguments = $arguments
+  if ($iconPath -and (Test-Path -LiteralPath $iconPath)) {
+    $sc.IconLocation = $iconPath
+  }
+  $sc.Save()
 }
 
 function Ensure-Python() {
@@ -92,9 +120,12 @@ Ensure-Dir $installRoot
 # Only download/update if remote revision differs (or unknown).
 $installed = Read-Installed-Revision $installRoot
 $remote = Get-Remote-Revision $OWNER $REPO $BRANCH
-if ($remote -and $installed -and ($remote -eq $installed)) {
-  Info "Already up to date."
-  exit 0
+if (-not $ForceUpdate) {
+  if ($remote -and $installed -and ($remote -eq $installed)) {
+    Info "Already up to date."
+    # Still allow shortcut creation / launch even if up to date.
+    if (-not $CreateShortcuts -and -not $Launch) { exit 0 }
+  }
 }
 
 $tmpDir = Join-Path $installRoot "_tmp"
@@ -150,6 +181,30 @@ Info "Installing dependencies..."
 Run (Join-Path $installRoot ".venv\\Scripts\\python.exe") "-m pip install --upgrade pip" $installRoot
 Run (Join-Path $installRoot ".venv\\Scripts\\python.exe") "-m pip install -r requirements.txt" $installRoot
 
+# Create run/update helpers in install root.
+$runBat = Join-Path $installRoot "run_gui.bat"
+@"
+@echo off
+setlocal
+set "ROOT=%~dp0"
+cd /d "%ROOT%"
+if exist ".venv\Scripts\pythonw.exe" (
+  start "" ".venv\Scripts\pythonw.exe" -m journal_parser.gui_app
+) else (
+  start "" pythonw -m journal_parser.gui_app
+)
+endlocal
+"@ | Set-Content -Encoding ASCII -LiteralPath $runBat
+
+$updatePs1 = Join-Path $installRoot "update.ps1"
+@"
+\$ErrorActionPreference = 'Stop'
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path (Split-Path -Parent \$MyInvocation.MyCommand.Path) 'install.ps1') -ForceUpdate
+"@ | Set-Content -Encoding UTF8 -LiteralPath $updatePs1
+
+# Copy this install.ps1 into install root for future updates.
+Copy-Item -Force -LiteralPath $PSCommandPath -Destination (Join-Path $installRoot "install.ps1")
+
 # Save installed revision (best-effort).
 if ($remote) {
   Write-Installed-Revision $installRoot $remote
@@ -159,4 +214,25 @@ if ($remote) {
 Remove-Item -Recurse -Force -LiteralPath $tmpDir
 
 Write-Host "Installed/updated to: $installRoot" -ForegroundColor Green
+
+if ($CreateShortcuts) {
+  $startMenu = Get-StartMenuDir
+  Ensure-Dir $startMenu
+
+  $icon = Join-Path $installRoot ".venv\\Scripts\\pythonw.exe"
+
+  # Start Menu shortcuts
+  Create-Shortcut (Join-Path $startMenu "journal-parser.lnk") $runBat $installRoot "" $icon
+  Create-Shortcut (Join-Path $startMenu "Обновить journal-parser.lnk") "powershell.exe" $installRoot "-NoProfile -ExecutionPolicy Bypass -File ""$updatePs1""" $icon
+
+  # Desktop shortcut (main app)
+  Create-Shortcut (Get-DesktopShortcutPath "journal-parser.lnk") $runBat $installRoot "" $icon
+}
+
+if ($Launch) {
+  $pythonw = Join-Path $installRoot ".venv\\Scripts\\pythonw.exe"
+  if (Test-Path -LiteralPath $pythonw) {
+    Start-Process -FilePath $pythonw -ArgumentList "-m journal_parser.gui_app" -WorkingDirectory $installRoot | Out-Null
+  }
+}
 

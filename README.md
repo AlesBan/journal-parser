@@ -12,6 +12,7 @@
 ### Установка / обновление (Windows)
 
 - `installer\output\journal-parser-setup.exe` — полноценный установщик (Inno Setup).
+- Если Inno Setup не установлен, `installer\build_installer.ps1` соберет `installer\output\Installer.exe` и `installer\output\Reinstaller.exe` через встроенный Windows IExpress.
 
 После установки появятся ярлыки:
 

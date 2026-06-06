@@ -20,3 +20,4 @@ cache/
 reports/
 
 installer/output/
+installer/*.exe

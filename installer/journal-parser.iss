@@ -36,5 +36,5 @@ Name: "{autoprograms}\Обновить journal-parser"; Filename: "powershell.ex
 Name: "{autodesktop}\journal-parser"; Filename: "{app}\journal-parser-bootstrap.bat"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\journal-parser-bootstrap.bat"; Description: "Запустить journal-parser"; Flags: postinstall skipifsilent runhidden
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"" -CreateShortcuts -Launch"; Flags: postinstall skipifsilent runhidden
 
