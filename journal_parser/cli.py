@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from journal_parser.analyze import analyze_pdf
+from journal_parser.gui_app import _repo_root
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -24,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_an.add_argument(
         "--out-dir",
-        default=str(Path("reports")),
+        default=str((_repo_root() / "reports").resolve()),
         help="Output directory for .rtf reports",
     )
     p_an.add_argument(

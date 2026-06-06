@@ -59,8 +59,9 @@ class App:
         self.cfg = _load_config()
         self.repo = _repo_root()
 
-        self.pdf_path = StringVar(value=self.cfg.get("last_pdf", ""))
-        self.out_dir = StringVar(value=self.cfg.get("out_dir", str((self.repo / "reports").resolve())))
+        # Defaults should not depend on previous runs/config.
+        self.pdf_path = StringVar(value="")
+        self.out_dir = StringVar(value=str((self.repo / "reports").resolve()))
         self.last_reports: list[Path] = []
 
         self._build_ui()
@@ -256,7 +257,6 @@ class App:
         if not p:
             return
         self.pdf_path.set(p)
-        self.cfg["last_pdf"] = p
         self.cfg["last_pdf_dir"] = str(Path(p).parent)
         _save_config(self.cfg)
 
@@ -288,8 +288,7 @@ class App:
         include_path = (self.repo / "filters" / "include.txt").resolve()
         exclude_path = (self.repo / "filters" / "exclude.txt").resolve()
 
-        self.cfg["out_dir"] = str(out_dir)
-        _save_config(self.cfg)
+        # Persist only what helps UX across runs; output dir is derived from the current repo root.
 
         self._set_busy(True)
         started_at = datetime.now()
