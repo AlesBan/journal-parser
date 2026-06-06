@@ -34,11 +34,6 @@ function Get-InstallRoot() {
   return Join-Path $base "journal-parser"
 }
 
-function Get-DesktopShortcutPath() {
-  $desktop = [Environment]::GetFolderPath("Desktop")
-  return Join-Path $desktop "journal-parser.lnk"
-}
-
 function Ensure-Python() {
   $py = Get-Command python -ErrorAction SilentlyContinue
   if (-not $py) {
@@ -59,16 +54,28 @@ function Copy-IfMissing([string]$src, [string]$dst) {
   }
 }
 
-function Create-Shortcut([string]$shortcutPath, [string]$targetPath, [string]$workingDir, [string]$arguments, [string]$iconPath) {
-  $wsh = New-Object -ComObject WScript.Shell
-  $sc = $wsh.CreateShortcut($shortcutPath)
-  $sc.TargetPath = $targetPath
-  $sc.WorkingDirectory = $workingDir
-  $sc.Arguments = $arguments
-  if ($iconPath -and (Test-Path -LiteralPath $iconPath)) {
-    $sc.IconLocation = $iconPath
+function Read-Installed-Revision([string]$installRoot) {
+  $revFile = Join-Path $installRoot "installed-revision.txt"
+  if (Test-Path -LiteralPath $revFile) {
+    try { return (Get-Content -LiteralPath $revFile -ErrorAction SilentlyContinue | Select-Object -First 1).Trim() } catch { }
   }
-  $sc.Save()
+  return ""
+}
+
+function Write-Installed-Revision([string]$installRoot, [string]$rev) {
+  $revFile = Join-Path $installRoot "installed-revision.txt"
+  Set-Content -Encoding ASCII -LiteralPath $revFile -Value $rev
+}
+
+function Get-Remote-Revision([string]$owner, [string]$repo, [string]$branch) {
+  $api = "https://api.github.com/repos/$owner/$repo/commits/$branch"
+  try {
+    $resp = Invoke-WebRequest -UseBasicParsing -Uri $api -Headers @{ "User-Agent" = "journal-parser-installer" }
+    $json = $resp.Content | ConvertFrom-Json
+    return [string]$json.sha
+  } catch {
+    return ""
+  }
 }
 
 # --- Config: update these to your GitHub repo ---
@@ -81,6 +88,14 @@ Ensure-Python
 
 $installRoot = Get-InstallRoot
 Ensure-Dir $installRoot
+
+# Only download/update if remote revision differs (or unknown).
+$installed = Read-Installed-Revision $installRoot
+$remote = Get-Remote-Revision $OWNER $REPO $BRANCH
+if ($remote -and $installed -and ($remote -eq $installed)) {
+  Info "Already up to date."
+  exit 0
+}
 
 $tmpDir = Join-Path $installRoot "_tmp"
 if (Test-Path -LiteralPath $tmpDir) { Remove-Item -Recurse -Force -LiteralPath $tmpDir }
@@ -112,6 +127,7 @@ Get-ChildItem -LiteralPath $extracted.FullName -Force | ForEach-Object {
   $name = $_.Name
   if ($name -eq ".git" -or $name -eq ".github") { return }
   if ($name -eq "filters") { return }
+  if ($name -eq "installer") { return }
   $dst = Join-Path $installRoot $name
   if (Test-Path -LiteralPath $dst) {
     Remove-Item -Recurse -Force -LiteralPath $dst
@@ -134,52 +150,13 @@ Info "Installing dependencies..."
 Run (Join-Path $installRoot ".venv\\Scripts\\python.exe") "-m pip install --upgrade pip" $installRoot
 Run (Join-Path $installRoot ".venv\\Scripts\\python.exe") "-m pip install -r requirements.txt" $installRoot
 
-# Create launcher in install root (double click)
-$launcher = Join-Path $installRoot "journal-parser.bat"
-@"
-@echo off
-setlocal
-set "ROOT=%~dp0"
-cd /d "%ROOT%"
-if exist ".venv\Scripts\pythonw.exe" (
-  start "" ".venv\Scripts\pythonw.exe" -m journal_parser.gui_app
-) else (
-  start "" pythonw -m journal_parser.gui_app
-)
-endlocal
-"@ | Set-Content -Encoding ASCII -LiteralPath $launcher
-
-# Create update launcher (reinstaller)
-$updateBat = Join-Path $installRoot "update.bat"
-@"
-@echo off
-setlocal
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update.ps1"
-endlocal
-"@ | Set-Content -Encoding ASCII -LiteralPath $updateBat
-
-# Write update.ps1 (calls install.ps1 logic by re-running from installed folder)
-$updatePs1 = Join-Path $installRoot "update.ps1"
-@"
-\$ErrorActionPreference = 'Stop'
-\$here = Split-Path -Parent \$MyInvocation.MyCommand.Path
-Write-Host 'Updating journal-parser...' -ForegroundColor Cyan
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path \$here 'install.ps1')
-Write-Host 'Done.' -ForegroundColor Green
-"@ | Set-Content -Encoding UTF8 -LiteralPath $updatePs1
-
-# Copy install.ps1 into install root for updates
-Copy-Item -Force -LiteralPath $PSCommandPath -Destination (Join-Path $installRoot "install.ps1")
-
-# Desktop shortcut
-$shortcutPath = Get-DesktopShortcutPath
-Info "Creating desktop shortcut: $shortcutPath"
-Create-Shortcut $shortcutPath $launcher $installRoot "" ""
+# Save installed revision (best-effort).
+if ($remote) {
+  Write-Installed-Revision $installRoot $remote
+}
 
 # Cleanup temp
 Remove-Item -Recurse -Force -LiteralPath $tmpDir
 
-Write-Host ""
-Write-Host "Installed to: $installRoot" -ForegroundColor Green
-Write-Host "Run: $launcher" -ForegroundColor Green
-Write-Host "Update later: $updateBat" -ForegroundColor Green
+Write-Host "Installed/updated to: $installRoot" -ForegroundColor Green
+

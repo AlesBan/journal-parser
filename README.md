@@ -11,9 +11,12 @@
 
 ### Установка / обновление (Windows)
 
-- `install.bat` — установка в `%LOCALAPPDATA%\journal-parser` + ярлык на рабочий стол
-- `update.bat` — “reinstaller”: подтянуть свежую версию с GitHub (ваши `filters/` сохраняются)
-- `installer\output\journal-parser-setup.exe` — полноценный установщик (собирается Inno Setup)
+- `installer\output\journal-parser-setup.exe` — полноценный установщик (Inno Setup).
+
+После установки появятся ярлыки:
+
+- **journal-parser** — запуск GUI (без терминала)
+- **Обновить journal-parser** — “reinstaller”: подтянуть свежую версию с GitHub (ваши `filters/` сохраняются)
 
 Сборка установщика (для разработчика):
 
@@ -31,7 +34,7 @@ pip install -r requirements.txt
 
 2) Запуск:
 
-- Двойной клик по `start_gui.bat`
+- ярлык **journal-parser** (или файл `{localappdata}\journal-parser\journal-parser-bootstrap.bat`)
 
 GUI использует **только** `filters/include.txt` и `filters/exclude.txt`, отчеты пишет в `reports/` в формате **`.rtf`**.
 

@@ -12,6 +12,7 @@ OutputBaseFilename=journal-parser-setup
 Compression=lzma2
 SolidCompression=yes
 Uninstallable=yes
+; SetupIconFile can be set if you add payload\app.ico
 
 [Languages]
 Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
@@ -20,11 +21,9 @@ Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: checkedonce
 
 [Files]
-Source: "..\install.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\update.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\install.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\update.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\start_gui.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "payload\install.ps1"; DestDir: "{app}"; DestName: "install.ps1"; Flags: ignoreversion
+Source: "payload\update.ps1"; DestDir: "{app}"; DestName: "update.ps1"; Flags: ignoreversion
+Source: "payload\run_gui.bat"; DestDir: "{app}"; DestName: "run_gui.bat"; Flags: ignoreversion
 Source: "journal-parser-bootstrap.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Keep user filters on uninstall/reinstall (filters are created by install.ps1).
@@ -33,6 +32,7 @@ Type: filesandordirs; Name: "{app}\_tmp"
 
 [Icons]
 Name: "{autoprograms}\journal-parser"; Filename: "{app}\journal-parser-bootstrap.bat"
+Name: "{autoprograms}\Обновить journal-parser"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\update.ps1"""; WorkingDir: "{app}"
 Name: "{autodesktop}\journal-parser"; Filename: "{app}\journal-parser-bootstrap.bat"; Tasks: desktopicon
 
 [Run]

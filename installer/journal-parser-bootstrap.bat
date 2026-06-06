@@ -1,10 +1,10 @@
 @echo off
 setlocal
-REM Bootstrapper: ensure installed app is present/updated and launch GUI.
+REM Bootstrapper: ensure app exists (first run) and launch GUI.
 set "ROOT=%~dp0"
 cd /d "%ROOT%"
 
-REM Run installer/update logic (downloads latest GitHub main, installs venv/deps).
+REM Install/update only if needed (install.ps1 caches installed revision).
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%install.ps1"
 
 REM Launch GUI without terminal window.
