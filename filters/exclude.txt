@@ -1,0 +1,21 @@
+# exclude fragments (one per line)
+# - substring match: token is dropped if it contains ANY fragment here
+# - apply AFTER include filtering
+# - lines starting with # are ignored
+гемодинамик
+железодефицит
+антиоксидант
+инсулинорезистент
+альбуминур
+вирус
+коронавирус
+постинсульт
+постинфаркт
+инкретин
+контину
+установ
+стандарт
+сочетан
+разработ
+восстанов
+приложен

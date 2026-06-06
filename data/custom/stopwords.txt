@@ -1,0 +1,9 @@
+# Normalized stop keys (one per line). Extend as false positives appear.
+таблетки
+капсулы
+раствор
+мг
+мл
+процент
+состав
+применение
