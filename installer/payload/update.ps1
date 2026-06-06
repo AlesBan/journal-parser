@@ -16,5 +16,6 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $target = Get-StateInstallRoot
 if (-not $target) { $target = $here }
 
-powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here "install.ps1") -ForceUpdate -InstallRoot $target
+# Always do a full reinstall on update (keeps filters/, preserves reports/, refreshes venv & shortcuts).
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here "install.ps1") -ForceUpdate -FullReinstall -CreateShortcuts -InstallRoot $target
 

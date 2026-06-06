@@ -3,7 +3,8 @@ param(
   [switch]$Launch,
   [switch]$ForceUpdate,
   [switch]$Machine,
-  [string]$InstallRoot
+  [string]$InstallRoot,
+  [switch]$FullReinstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -258,6 +259,15 @@ Ensure-Elevated-IfNeeded $installRoot
 Ensure-Dir $installRoot
 Write-InstallRootPointer $installRoot
 
+# Full reinstall: remove venv so deps can't get "stuck".
+if ($FullReinstall) {
+  $venv = Join-Path $installRoot ".venv"
+  if (Test-Path -LiteralPath $venv) {
+    Info "Removing existing venv..."
+    try { Remove-Item -Recurse -Force -LiteralPath $venv } catch { }
+  }
+}
+
 # Only download/update if remote revision differs (or unknown).
 $installed = Read-Installed-Revision $installRoot
 $remote = Get-Remote-Revision $OWNER $REPO $BRANCH
@@ -299,6 +309,7 @@ Get-ChildItem -LiteralPath $extracted.FullName -Force | ForEach-Object {
   $name = $_.Name
   if ($name -eq ".git" -or $name -eq ".github") { return }
   if ($name -eq "filters") { return }
+  if ($name -eq "reports") { return }
   if ($name -eq "installer") { return }
   $dst = Join-Path $installRoot $name
   if (Test-Path -LiteralPath $dst) {
