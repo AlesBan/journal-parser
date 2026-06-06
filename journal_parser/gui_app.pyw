@@ -6,7 +6,7 @@ import threading
 import traceback
 from pathlib import Path
 from datetime import datetime
-from tkinter import Button, Canvas, Frame, PhotoImage, StringVar, Tk, filedialog, messagebox, ttk
+from tkinter import BooleanVar, Button, Canvas, Frame, PhotoImage, StringVar, Tk, filedialog, messagebox, ttk
 
 from journal_parser.analyze import analyze_pdf, build_report_path
 
@@ -108,6 +108,8 @@ class App:
         # Defaults should not depend on previous runs/config.
         self.pdf_path = StringVar(value="")
         self.out_dir = StringVar(value=str((self.repo / "reports").resolve()))
+        # OCR plugin can take minutes (network); keep it opt-in.
+        self.use_ocr = BooleanVar(value=bool(self.cfg.get("use_ocr", False)))
         self.last_reports: list[Path] = []
 
         self._build_ui()
@@ -177,6 +179,16 @@ class App:
             if str(self.btn_analyze["state"]) == "normal"
             else None,
         )
+
+        # OCR toggle (opt-in)
+        ocr_row = ttk.Frame(frm)
+        ocr_row.pack(fill="x", pady=(8, 0))
+        ttk.Checkbutton(
+            ocr_row,
+            text="Использовать OCR (медленно, если PDF скан)",
+            variable=self.use_ocr,
+            command=lambda: _save_config({**self.cfg, "use_ocr": bool(self.use_ocr.get())}),
+        ).pack(side="left")
 
         # Row 2: Output directory (boxed) + include/exclude editors (boxed)
         row2 = ttk.Frame(frm)
@@ -351,6 +363,7 @@ class App:
 
         # OCR is internal; UI stays minimal. We auto-use plugin only when needed.
         ocr_plugin = (self.repo / "ocr_plugins" / "imagetoword_api_plugin.py").resolve()
+        ocr_plugin_path = ocr_plugin if bool(self.use_ocr.get()) else None
 
         def worker() -> None:
             try:
@@ -359,7 +372,7 @@ class App:
                     out_dir=out_dir,
                     include_path=include_path,
                     exclude_path=exclude_path,
-                    ocr_plugin_path=ocr_plugin,
+                    ocr_plugin_path=ocr_plugin_path,
                     ocr_force=False,
                     now=started_at,
                 )
