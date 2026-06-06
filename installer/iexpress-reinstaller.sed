@@ -37,9 +37,11 @@ UserQuietInstCmd=
 FILE0="install.ps1"
 FILE1="update.ps1"
 FILE2="run_gui.bat"
+FILE3="app.ico"
 [SourceFiles]
 SourceFiles0=payload\
 [SourceFiles0]
 %FILE0%=
 %FILE1%=
 %FILE2%=
+%FILE3%=

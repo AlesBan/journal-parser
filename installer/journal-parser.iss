@@ -12,7 +12,7 @@ OutputBaseFilename=journal-parser-setup
 Compression=lzma2
 SolidCompression=yes
 Uninstallable=yes
-; SetupIconFile can be set if you add payload\app.ico
+SetupIconFile=payload\app.ico
 
 [Languages]
 Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
@@ -24,6 +24,7 @@ Name: "desktopicon"; Description: "Создать ярлык на рабочем
 Source: "payload\install.ps1"; DestDir: "{app}"; DestName: "install.ps1"; Flags: ignoreversion
 Source: "payload\update.ps1"; DestDir: "{app}"; DestName: "update.ps1"; Flags: ignoreversion
 Source: "payload\run_gui.bat"; DestDir: "{app}"; DestName: "run_gui.bat"; Flags: ignoreversion
+Source: "payload\app.ico"; DestDir: "{app}"; DestName: "app.ico"; Flags: ignoreversion
 Source: "journal-parser-bootstrap.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Keep user filters on uninstall/reinstall (filters are created by install.ps1).

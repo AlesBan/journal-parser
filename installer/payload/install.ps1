@@ -345,7 +345,7 @@ if ($CreateShortcuts) {
   $startMenu = Get-StartMenuDir
   Ensure-Dir $startMenu
 
-  $icon = Join-Path $installRoot ".venv\\Scripts\\pythonw.exe"
+  $icon = Join-Path $installRoot "app.ico"
 
   # Start Menu shortcuts
   Create-Shortcut (Join-Path $startMenu "journal-parser.lnk") $runBat $installRoot "" $icon
