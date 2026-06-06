@@ -238,6 +238,8 @@ $BRANCH = "main"
 
 Ensure-Python
 
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+
 $installRoot = if ($InstallRoot -and $InstallRoot.Trim()) { $InstallRoot } else { Get-DefaultInstallRoot -machineInstall:$Machine }
 Ensure-Elevated-IfNeeded $installRoot
 Ensure-Dir $installRoot
@@ -320,6 +322,14 @@ if exist ".venv\Scripts\pythonw.exe" (
 )
 endlocal
 "@ | Set-Content -Encoding ASCII -LiteralPath $runBat
+
+$appIco = Join-Path $installRoot "app.ico"
+if (-not (Test-Path -LiteralPath $appIco)) {
+  $srcIco = Join-Path $here "app.ico"
+  if (Test-Path -LiteralPath $srcIco) {
+    Copy-Item -Force -LiteralPath $srcIco -Destination $appIco
+  }
+}
 
 $updatePs1 = Join-Path $installRoot "update.ps1"
 @"

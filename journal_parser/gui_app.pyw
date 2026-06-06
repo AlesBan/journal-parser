@@ -6,12 +6,24 @@ import threading
 import traceback
 from pathlib import Path
 from datetime import datetime
-from tkinter import Button, Canvas, Frame, StringVar, Tk, filedialog, messagebox, ttk
+from tkinter import Button, Canvas, Frame, PhotoImage, StringVar, Tk, filedialog, messagebox, ttk
 
 from journal_parser.analyze import analyze_pdf, build_report_path
 
 
 APP_NAME = "journal-parser"
+
+
+def _find_icon_ico(repo: Path) -> Path | None:
+    # Prefer installed icon, fallback to repo assets.
+    candidates = [
+        repo / "installer" / "payload" / "app.ico",
+        repo / "assets" / "app.png",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
 
 
 def _appdata_dir() -> Path:
@@ -58,6 +70,18 @@ class App:
 
         self.cfg = _load_config()
         self.repo = _repo_root()
+
+        icon_path = _find_icon_ico(self.repo)
+        if icon_path:
+            try:
+                # iconbitmap expects .ico; for .png we use iconphoto.
+                if icon_path.suffix.lower() == ".ico":
+                    self.root.iconbitmap(default=str(icon_path))
+                else:
+                    self._icon_img = PhotoImage(file=str(icon_path))
+                    self.root.iconphoto(True, self._icon_img)
+            except Exception:
+                pass
 
         # Defaults should not depend on previous runs/config.
         self.pdf_path = StringVar(value="")
