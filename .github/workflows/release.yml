@@ -1,0 +1,39 @@
+name: build-and-release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build installers (IExpress fallback)
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          pwsh -NoProfile -ExecutionPolicy Bypass -File installer/build_installer.ps1
+
+      - name: Prepare artifacts
+        shell: pwsh
+        run: |
+          if (!(Test-Path "installer/output/Installer.exe")) { throw "Missing installer/output/Installer.exe" }
+          if (!(Test-Path "installer/output/Reinstaller.exe")) { throw "Missing installer/output/Reinstaller.exe" }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Force "installer/output/Installer.exe" "dist/journal-parser-Installer.exe"
+          Copy-Item -Force "installer/output/Reinstaller.exe" "dist/journal-parser-Reinstaller.exe"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/journal-parser-Installer.exe
+            dist/journal-parser-Reinstaller.exe
+

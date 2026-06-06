@@ -74,6 +74,13 @@ if (Build-Inno) {
 }
 
 Info "Inno Setup not found. Falling back to Windows IExpress..."
+
+# Remove stale outputs in case a previous build left partial files.
+$stale1 = Join-Path $PSScriptRoot "Installer.exe"
+$stale2 = Join-Path $PSScriptRoot "Reinstaller.exe"
+if (Test-Path -LiteralPath $stale1) { Remove-Item -Force -LiteralPath $stale1 }
+if (Test-Path -LiteralPath $stale2) { Remove-Item -Force -LiteralPath $stale2 }
+
 Build-IExpress "iexpress-installer.sed"
 Build-IExpress "iexpress-reinstaller.sed"
 
