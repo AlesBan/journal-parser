@@ -11,6 +11,9 @@
 
 ### Установка / обновление (Windows)
 
+- **Для пользователей** используйте отдельный репозиторий-установщик: `https://github.com/AlesBan/journal-parser-app`.
+  Он ставит/обновляет приложение **в одну папку** (ту, куда юзер склонировал репозиторий), без дублей и “разлёта” по системе.
+
 - `installer\output\journal-parser-setup.exe` — полноценный установщик (Inno Setup).
 - Если Inno Setup не установлен, `installer\build_installer.ps1` соберет `installer\output\Installer.exe` и `installer\output\Reinstaller.exe` через встроенный Windows IExpress.
 

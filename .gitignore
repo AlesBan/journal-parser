@@ -16,6 +16,7 @@ cache/
 .env
 
 .imagetoword-session.json
+/.imagetoword-tmp/
 
 reports/
 
