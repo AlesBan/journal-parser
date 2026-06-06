@@ -330,7 +330,7 @@ def analyze_pdf(
     include_fragments = load_fragments(include_path)
     exclude_fragments = load_fragments(exclude_path)
     if not include_fragments:
-        raise SystemExit("include fragments file is empty (filters/include.txt).")
+        raise ValueError("include fragments file is empty (filters/include.txt).")
 
     pages = extract_pages(pdf_path, ocr_plugin_path=ocr_plugin_path, ocr_force=ocr_force)
     toc_entries = extract_toc_entries(pages)

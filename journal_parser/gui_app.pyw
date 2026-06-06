@@ -383,7 +383,8 @@ class App:
                     self._set_busy(False)
 
                 self.root.after(0, done_ok)
-            except Exception as e:
+            except BaseException as e:
+                # Includes SystemExit, KeyboardInterrupt, etc.
                 tb = traceback.format_exc()
 
                 def done_err() -> None:
